@@ -79,6 +79,7 @@ minetest.register_node("enhanced_beginnings:stick_node", {
 	},
 	drawtype = "nodebox",
 	paramtype = "light",
+	paramtype2 = "facedir",
 	node_box = {
 		type = "fixed",
 		fixed = {
