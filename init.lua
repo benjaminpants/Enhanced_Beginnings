@@ -82,8 +82,9 @@ minetest.register_node("enhanced_beginnings:stick_node", {
 	node_box = {
 		type = "fixed",
 		fixed = {
-			{-0.5, -0.5, -0.0625, 0.5, -0.3125, 0.125}, -- NodeBox1
-			{0.0625, -0.3125, -0.0625, 0.25, -0.1875, 0.125}, -- NodeBox2
+			{-0.375, -0.5, -0.0625, 0.375, -0.4375, 0},
+			{-0.1875, -0.5, -0.125, -0.125, -0.4375, -0.0625},
+			{0.125, -0.5, 0, 0.1875, -0.4375, 0.0625},
 		}
 	},
 	drop = "default:stick",
@@ -91,8 +92,8 @@ minetest.register_node("enhanced_beginnings:stick_node", {
 	groups = {dig_immediate=2, falling_node = 1}
 })
 
-enhanced_beginnings.flint_tool_functions = {}
 
+if (not bens_gear_exists) then
 
 minetest.register_tool("enhanced_beginnings:axe_flint", {
 		description = S("Flint Axe"),
@@ -144,13 +145,72 @@ minetest.register_tool("enhanced_beginnings:axe_flint", {
 })
 
 
+else
+	bens_gear.add_ore({
+	internal_name = "ehb_flint",
+	display_name = S("Flint"),
+	item_name = "default:flint",
+	max_drop_level = 0,
+	damage_groups_any = {fleshy=1},
+	damage_groups_sword = {fleshy=1},
+	damage_groups_axe = {fleshy=2},
+	full_punch_interval = 1.3,
+	uses = 5,
+	flammable = false,
+	groupcaps = { --the groupcaps for the tool. durability is typically used instead of "uses" so there is no need to define it
+		crumbly = {times={[1]=3.02, [2]=1.64, [3]=0.64}, maxlevel=1},
+		cracky = {times={[3]=9999.0}, maxlevel=1},
+		choppy = {times={[2]=3.50, [3]=3.0}, maxlevel=1},
+		snappy = {times={[2]=9999.0, [3]=9999.0}, maxlevel=1},
+	
+	},
+	tool_list = {
+		"axe",
+		"shovel"
+	},
+	tool_list_whitelist = true, --if this is true, then tool_list should act like a whitelist, otherwise, it'll act like a blacklist
+	color = "38332D",
+	tool_textures = {
+		default_alias = "stone", --what to append to the end of the default texture name, example: "bens_gear_axe_" would become "bens_gear_axe_metal"
+		axe = {"enhanced_beginnings_flint_axe_bg.png",false},
+		shovel = {"enhanced_beginnings_flint_shovel_bg.png",false}
+	},
+	misc_data = {magic=0}, --here you can store various other weird stats for other mods to utilize, the only stat that is officially supported at the moment is "magic"
+	additional_functions = { --a list of additional functions that'll be called upon certain conditions. This is here so that custom tools don't have to have support manually added.
+		node_mined = nil,
+		tool_destroyed = nil,
+		tool_attempt_place = nil,
+	},
+	pre_finalization_function = nil
+	})
+	
+	bens_gear.add_rod({
+	internal_name = "ebh_stick",
+	display_name = S("Stick Rod"),
+	item_name = "group:stick",
+	color = "6B5534",
+	uses_multiplier = 1,
+	speed_multiplier = 1.5,
+	damage_multiplier = 1,
+	full_punch_interval_multiplier = 1,
+	rod_main_texture = {"bens_gear_rod_def.png",true},
+	flammable = true,
+	rod_textures = {
+		default_alias = "def", --what to append to the end of the default texture name, example: "bens_gear_rod_pick_" would become "bens_gear_rod_pick_def", custom tools might have their own texture varients
+		--pickaxe = {"bens_gear_rod_pick_def",true} --use a custom rod for pickaxes, you can add more for other tools.
+	}
+	})
+
+end
+
+
 local old_handle_node_drops = minetest.handle_node_drops
 function minetest.handle_node_drops(pos, drops, digger, ...)
 	if digger == nil then
 		return old_handle_node_drops(pos, drops, digger, ...)
 	end
 	local current_tool = digger:get_wielded_item():get_name()
-	if current_tool == "enhanced_beginnings:axe_flint" then
+	if (current_tool == "enhanced_beginnings:axe_flint" or (string.find(current_tool,"bens_gear:axe_ehb_flint"))) then
 		local node = minetest.get_node(pos).name
 		local output = minetest.get_craft_result({
 		method = "normal",
@@ -180,14 +240,26 @@ end
 
 minetest.register_decoration({
 	deco_type = "simple",
-	place_on = {"default:dirt_with_grass","default:dirt_with_dry_grass","default:dirt_with_rainforest_litter"},
+	place_on = {"default:dirt_with_grass","default:dirt_with_dry_grass","default:dirt_with_rainforest_litter", "group:spreading_dirt_type"},
 	sidelen = 2,
-	fill_ratio = 0.02,
+	fill_ratio = 0.012,
 	decoration = "enhanced_beginnings:stick_node"
 
 })
 
+minetest.register_craft({
+	output = "default:flint",
+	recipe = {
+		{"default:gravel","default:gravel","default:gravel"},
+		{"default:gravel","default:gravel","default:gravel"},
+		{"default:gravel","default:gravel","default:gravel"},
+	}
+})
 
+
+minetest.override_item("default:stone", {drop = "enhanced_beginnings:pebbles 2"})
+
+minetest.override_item("default:desert_stone", {drop = "enhanced_beginnings:pebbles_desert 2"})
 
 minetest.register_on_mods_loaded(function()
 	minetest.override_item("default:gravel", {drop = {
@@ -198,9 +270,6 @@ minetest.register_on_mods_loaded(function()
 		}
 	}})
 	
-	minetest.override_item("default:stone", {drop = "enhanced_beginnings:pebbles"})
-	
-	minetest.override_item("default:desert_stone", {drop = "enhanced_beginnings:pebbles_desert"})
 	for i, thing in pairs(minetest.registered_nodes) do
 		if (thing.groups) then
 			if ((thing.groups["tree"] ~= nil and thing.groups["tree"] ~= 0) or string.find(i,"stem")) then
